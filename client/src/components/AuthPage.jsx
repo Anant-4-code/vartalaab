@@ -2,11 +2,14 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { FiMail, FiLock, FiUser, FiEye, FiEyeOff, FiSun, FiMoon, FiArrowRight, FiLogIn, FiUserPlus } from 'react-icons/fi';
 import { motion, AnimatePresence } from 'framer-motion';
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth";
+import { app } from '../firebase';
 
 const AuthPage = () => {
   const location = useLocation();
   const [isLogin, setIsLogin] = useState(true);
   const [darkMode, setDarkMode] = useState(true);
+  const auth = getAuth(app);
 
   // Check for navigation state to determine if we should show login or signup
   useEffect(() => {
@@ -101,22 +104,43 @@ const AuthPage = () => {
     if (!validateForm()) return;
     
     setIsLoading(true);
-    
-    // Simulate API call
-    setTimeout(() => {
-      setIsLoading(false);
-      
-      if (isLogin) {
-        // For demo, just save the email as username and redirect
-        localStorage.setItem('username', formData.email.split('@')[0]);
-        navigate('/chat');
-      } else {
-        // For signup, show success and switch to login
-        setIsLogin(true);
-        // Show success message
-        alert('Account created successfully! Please log in.');
-      }
-    }, 1500);
+    setErrors({}); // Clear previous errors
+
+    if (isLogin) {
+      signInWithEmailAndPassword(auth, formData.email, formData.password)
+        .then((userCredential) => {
+          // Signed in 
+          const user = userCredential.user;
+          console.log('User logged in:', user);
+          // For now, redirect directly. We'll handle global user state later.
+          navigate('/chat');
+        })
+        .catch((error) => {
+          setIsLoading(false);
+          const errorCode = error.code;
+          const errorMessage = error.message;
+          console.error('Login error:', errorCode, errorMessage);
+          setErrors({ firebase: errorMessage });
+        });
+    } else {
+      createUserWithEmailAndPassword(auth, formData.email, formData.password)
+        .then((userCredential) => {
+          // Signed up 
+          const user = userCredential.user;
+          console.log('User signed up:', user);
+          // After signup, switch to login mode and prompt user to login
+          setIsLogin(true);
+          setIsLoading(false);
+          alert('Account created successfully! Please log in.');
+        })
+        .catch((error) => {
+          setIsLoading(false);
+          const errorCode = error.code;
+          const errorMessage = error.message;
+          console.error('Signup error:', errorCode, errorMessage);
+          setErrors({ firebase: errorMessage });
+        });
+    }
   };
 
   // Toggle between login and signup
@@ -209,6 +233,12 @@ const AuthPage = () => {
                 <h2 className="text-2xl font-bold text-center mb-6 text-gray-800 dark:text-white">
                   {isLogin ? 'Welcome back!' : 'Create an account'}
                 </h2>
+                {errors.firebase && (
+                  <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4 dark:bg-red-900/20 dark:border-red-700 dark:text-red-300" role="alert">
+                    <strong className="font-bold">Error!</strong>
+                    <span className="block sm:inline"> {errors.firebase}</span>
+                  </div>
+                )}
                 
                 <form onSubmit={handleSubmit} className="space-y-4">
                   {!isLogin && (
