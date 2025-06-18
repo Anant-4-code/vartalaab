@@ -1,4 +1,3 @@
-import React from 'react';
 import { Link } from 'react-router-dom';
 import { 
   FiMessageSquare, 
@@ -6,7 +5,8 @@ import {
   FiSun, 
   FiZap,
   FiLock,
-  FiSmartphone
+  FiSmartphone,
+  FiArrowRight
 } from 'react-icons/fi';
 
 const FeatureCard = ({ icon, title, description }) => (
