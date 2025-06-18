@@ -4,10 +4,13 @@ import { io } from 'socket.io-client';
 import { format } from 'date-fns';
 import ReactMarkdown from 'react-markdown';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiSend, FiMoon, FiSun, FiMessageSquare, FiUsers, FiSearch, FiPlus, FiLogOut } from 'react-icons/fi';
+import { FiSend, FiMoon, FiSun, FiMessageSquare, FiUsers, FiPlus, FiLogOut } from 'react-icons/fi';
+
+// Determine the server URL based on environment
+const SERVER_URL = import.meta.env.VITE_APP_SERVER_URL || 'http://localhost:3001';
 
 // Initialize socket connection
-const socket = io('http://localhost:3001', { autoConnect: false });
+const socket = io(SERVER_URL, { autoConnect: false });
 
 const ChatApp = () => {
   const [darkMode, setDarkMode] = useState(false);
@@ -15,7 +18,7 @@ const ChatApp = () => {
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState([]);
   const [users, setUsers] = useState([]);
-  const [rooms, setRooms] = useState(['general', 'random', 'help']);
+  const [rooms, /**/ ] = useState(['general', 'random', 'help']);
   const [currentRoom, setCurrentRoom] = useState('general');
   const [showSidebar, setShowSidebar] = useState(true);
   const [showUserList, setShowUserList] = useState(false);
@@ -60,7 +63,7 @@ const ChatApp = () => {
       setMessages((prevMessages) => [...prevMessages, message]);
     });
     
-    socket.on('roomUsers', ({ room, users }) => {
+    socket.on('roomUsers', ({ users }) => {
       setUsers(users);
     });
     
