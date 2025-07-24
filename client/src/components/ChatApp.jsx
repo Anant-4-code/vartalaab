@@ -44,12 +44,12 @@ const ChatApp = () => {
 
   // Connect to socket when component mounts
   useEffect(() => {
-    const savedUsername = localStorage.getItem('username');
+    let savedUsername = localStorage.getItem('username');
+    // If no username is found, use a default one for testing
     if (!savedUsername) {
-      navigate('/login');
-      return;
+      savedUsername = `Guest_${Math.floor(Math.random() * 1000)}`;
+      localStorage.setItem('username', savedUsername);
     }
-    
     setUsername(savedUsername);
     
     // Connect to socket
@@ -60,11 +60,18 @@ const ChatApp = () => {
     
     // Set up event listeners
     socket.on('message', (message) => {
-      setMessages((prevMessages) => [...prevMessages, message]);
+      // Ensure message has required fields and valid timestamp
+      const validatedMessage = {
+        ...message,
+        username: message.username || 'Unknown',
+        text: message.text || '',
+        time: message.time || new Date().toISOString()
+      };
+      setMessages((prevMessages) => [...prevMessages, validatedMessage]);
     });
     
-    socket.on('roomUsers', ({ users }) => {
-      setUsers(users);
+    socket.on('roomData', ({ room, users }) => {
+      setUsers(users || []);
     });
     
     // Clean up on unmount
@@ -87,10 +94,8 @@ const ChatApp = () => {
     if (message.trim() === '') return;
     
     // Emit message to server
-    socket.emit('chatMessage', {
-      username,
-      text: message,
-      room: currentRoom
+    socket.emit('sendMessage', {
+      text: message
     });
     
     // Clear input
@@ -203,9 +208,14 @@ const ChatApp = () => {
               >
                 <FiMessageSquare className="w-5 h-5" />
               </button>
-              <h2 className="ml-4 text-lg font-semibold text-gray-900 dark:text-white">
-                #{currentRoom}
-              </h2>
+              <div className="flex items-center">
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  #{currentRoom}
+                </h2>
+                <span className="ml-2 px-2 py-0.5 text-xs bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-full">
+                  {users.length} {users.length === 1 ? 'member' : 'members'}
+                </span>
+              </div>
             </div>
             <button 
               onClick={() => setShowUserList(!showUserList)}
@@ -242,7 +252,7 @@ const ChatApp = () => {
                       <ReactMarkdown>{msg.text}</ReactMarkdown>
                     </div>
                     <p className="text-xs mt-1 opacity-70 text-right">
-                      {format(new Date(msg.time), 'h:mm a')}
+                      {msg.time ? format(new Date(msg.time), 'h:mm a') : 'Just now'}
                     </p>
                   </div>
                 </motion.div>

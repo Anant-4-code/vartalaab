@@ -98,7 +98,7 @@ const AuthPage = () => {
   };
 
   // Handle form submission
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
     if (!validateForm()) return;
@@ -107,39 +107,68 @@ const AuthPage = () => {
     setErrors({}); // Clear previous errors
 
     if (isLogin) {
-      signInWithEmailAndPassword(auth, formData.email, formData.password)
-        .then((userCredential) => {
-          // Signed in 
-          const user = userCredential.user;
-          console.log('User logged in:', user);
-          // For now, redirect directly. We'll handle global user state later.
-          navigate('/chat');
-        })
-        .catch((error) => {
-          setIsLoading(false);
-          const errorCode = error.code;
-          const errorMessage = error.message;
-          console.error('Login error:', errorCode, errorMessage);
-          setErrors({ firebase: errorMessage });
-        });
+      try {
+        // Log inputs
+        console.log('Attempting login with:', formData.email);
+
+        // Sign in with email and password
+        const userCredential = await signInWithEmailAndPassword(auth, formData.email, formData.password);
+
+        // Log user info
+        console.log('User logged in:', userCredential.user);
+
+        // Clear error on success
+        setErrors({});
+
+        // For now, redirect directly. We'll handle global user state later.
+        navigate('/chat');
+      } catch (err) {
+        // Log full error object for debugging
+        console.error('Login error:', err);
+
+        // Check error code and set user-friendly message
+        if (err.code === 'auth/invalid-credential') {
+          setErrors({ firebase: 'Invalid credentials provided. Please check your login details.' });
+        } else if (err.code === 'auth/user-not-found') {
+          setErrors({ firebase: 'User not found. Please check your email.' });
+        } else if (err.code === 'auth/wrong-password') {
+          setErrors({ firebase: 'Incorrect password. Please try again.' });
+        } else {
+          setErrors({ firebase: 'Login failed. Please try again later.' });
+        }
+
+        setIsLoading(false);
+      }
     } else {
-      createUserWithEmailAndPassword(auth, formData.email, formData.password)
-        .then((userCredential) => {
-          // Signed up 
-          const user = userCredential.user;
-          console.log('User signed up:', user);
-          // After signup, switch to login mode and prompt user to login
-          setIsLogin(true);
-          setIsLoading(false);
-          alert('Account created successfully! Please log in.');
-        })
-        .catch((error) => {
-          setIsLoading(false);
-          const errorCode = error.code;
-          const errorMessage = error.message;
-          console.error('Signup error:', errorCode, errorMessage);
-          setErrors({ firebase: errorMessage });
-        });
+      try {
+        // Create user with email and password
+        const userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
+
+        // Log user info
+        console.log('User signed up:', userCredential.user);
+
+        // Clear error on success
+        setErrors({});
+
+        // After signup, switch to login mode and prompt user to login
+        setIsLogin(true);
+        setIsLoading(false);
+        alert('Account created successfully! Please log in.');
+      } catch (err) {
+        // Log full error object for debugging
+        console.error('Signup error:', err);
+
+        // Check error code and set user-friendly message
+        if (err.code === 'auth/email-already-in-use') {
+          setErrors({ firebase: 'Email already in use. Please try another email.' });
+        } else if (err.code === 'auth/weak-password') {
+          setErrors({ firebase: 'Password is too weak. Please try a stronger password.' });
+        } else {
+          setErrors({ firebase: 'Signup failed. Please try again later.' });
+        }
+
+        setIsLoading(false);
+      }
     }
   };
 
@@ -472,7 +501,7 @@ const AuthPage = () => {
         </div>
         
         <div className="mt-8 text-center text-sm text-gray-500 dark:text-gray-400">
-          <p>© {new Date().getFullYear()} ChatFlow. All rights reserved.</p>
+          <p> {new Date().getFullYear()} ChatFlow. All rights reserved.</p>
         </div>
       </div>
     </div>
