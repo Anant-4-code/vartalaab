@@ -22,7 +22,7 @@ const io = new Server(server, {
   cors: {
     origin: process.env.NODE_ENV === 'development' 
       ? ['http://localhost:3000', 'http://localhost:5173'] 
-      : ['https://vartalaab-git-main-anant-4-code-projects.vercel.app', 'YOUR_PRODUCTION_URL'],
+      : ['https://vartalaab-git-main-anant-4-code-projects.vercel.app'], // Removed 'YOUR_PRODUCTION_URL'
     methods: ['GET', 'POST'],
     credentials: true
   }
@@ -32,7 +32,7 @@ const io = new Server(server, {
 const corsOptions = {
   origin: process.env.NODE_ENV === 'development' 
     ? ['http://localhost:3000', 'http://localhost:5173']
-    : ['https://vartalaab-git-main-anant-4-code-projects.vercel.app', 'YOUR_PRODUCTION_URL'],
+    : ['https://vartalaab-git-main-anant-4-code-projects.vercel.app'], // Removed 'YOUR_PRODUCTION_URL'
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
