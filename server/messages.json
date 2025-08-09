@@ -130,5 +130,35 @@
     "text": "hello",
     "timestamp": "2025-08-09T08:30:32.620Z",
     "room": "random"
+  },
+  {
+    "user": "Guest_566",
+    "text": "hi",
+    "timestamp": "2025-08-09T09:15:51.626Z",
+    "room": "general"
+  },
+  {
+    "user": "Guest_566",
+    "text": "I'll get back to you on that.",
+    "timestamp": "2025-08-09T09:15:56.585Z",
+    "room": "general"
+  },
+  {
+    "user": "Guest_566",
+    "text": "I'll get back to you on that.",
+    "timestamp": "2025-08-09T09:15:59.625Z",
+    "room": "general"
+  },
+  {
+    "user": "Guest_248",
+    "text": "Let me think about that...",
+    "timestamp": "2025-08-09T09:16:07.958Z",
+    "room": "general"
+  },
+  {
+    "user": "Guest_248",
+    "text": "hi",
+    "timestamp": "2025-08-09T10:17:00.065Z",
+    "room": "general"
   }
 ]

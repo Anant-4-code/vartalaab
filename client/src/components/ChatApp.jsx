@@ -154,11 +154,11 @@ const ChatApp = () => {
   };
 
   return (
-    <div className={`flex h-screen ${darkMode ? 'dark' : ''}`}>
+    <div className={`h-screen ${darkMode ? 'dark' : ''} flex md:grid md:grid-cols-[256px_1fr_256px]`}> {/* Added responsive grid for larger screens */}
       {/* Sidebar */}
       <div 
         className={`${showSidebar ? 'translate-x-0' : '-translate-x-full'} 
-                  md:translate-x-0 fixed md:static inset-y-0 left-0 z-20 w-64 bg-white dark:bg-gray-800 
+                  md:translate-x-0 fixed md:relative inset-y-0 left-0 z-20 w-64 bg-white dark:bg-gray-800 
                   shadow-lg md:shadow-none transition-transform duration-300 ease-in-out`}
       >
         <div className="p-4 h-full flex flex-col">
@@ -268,7 +268,7 @@ const ChatApp = () => {
                   className={`flex ${msg.username === username ? 'justify-end' : 'justify-start'}`}
                 >
                   <div 
-                    className={`max-w-xs md:max-w-md rounded-lg p-3 ${
+                    className={`max-w-xs md:max-w-md rounded-lg p-3 overflow-hidden break-words ${
                       msg.username === username
                         ? 'bg-primary-500 text-white rounded-br-none'
                         : 'bg-white dark:bg-gray-800 shadow rounded-bl-none'
@@ -279,7 +279,7 @@ const ChatApp = () => {
                         {msg.username}
                       </p>
                     )}
-                    <div className="prose dark:prose-invert max-w-none">
+                    <div className="prose dark:prose-invert max-w-none break-words"> {/* Added break-words for long content */}
                       <ReactMarkdown>{msg.text}</ReactMarkdown>
                     </div>
                     <p className="text-xs mt-1 opacity-70 text-right">
@@ -347,7 +347,7 @@ const ChatApp = () => {
       {/* User List */}
       <div 
         className={`${showUserList ? 'translate-x-0' : 'translate-x-full'} 
-                  md:translate-x-0 fixed inset-y-0 right-0 z-20 w-64 bg-white dark:bg-gray-800 
+                  md:translate-x-0 fixed md:relative inset-y-0 right-0 z-20 w-64 bg-white dark:bg-gray-800 
                   shadow-lg md:shadow-none transition-transform duration-300 ease-in-out`}
       >
         <div className="p-4">
