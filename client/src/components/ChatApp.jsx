@@ -154,11 +154,11 @@ const ChatApp = () => {
   };
 
   return (
-    <div className={`h-screen ${darkMode ? 'dark' : ''} flex md:grid md:grid-cols-[256px_1fr_256px]`}> {/* Added responsive grid for larger screens */}
+    <div className={`h-screen ${darkMode ? 'dark' : ''} overflow-hidden relative md:grid md:grid-cols-[256px_1fr_256px]`}> {/* Added relative and responsive grid for larger screens */}
       {/* Sidebar */}
       <div 
         className={`${showSidebar ? 'translate-x-0' : '-translate-x-full'} 
-                  md:translate-x-0 fixed md:relative inset-y-0 left-0 z-20 w-64 bg-white dark:bg-gray-800 
+                  md:translate-x-0 fixed md:static inset-y-0 left-0 z-20 w-64 bg-white dark:bg-gray-800 
                   shadow-lg md:shadow-none transition-transform duration-300 ease-in-out`}
       >
         <div className="p-4 h-full flex flex-col">
@@ -228,7 +228,7 @@ const ChatApp = () => {
       </div>
 
       {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col h-screen overflow-hidden bg-gray-50 dark:bg-gray-900 md:flex">
+      <div className="flex-1 flex flex-col h-screen overflow-hidden bg-gray-50 dark:bg-gray-900"> {/* Removed md:flex here, flex-col is enough */}
         {/* Header */}
         <header className="bg-white dark:bg-gray-800 shadow-sm z-10">
           <div className="flex items-center justify-between h-16 px-4">
@@ -258,7 +258,7 @@ const ChatApp = () => {
         </header>
 
         {/* Messages */}
-        <div className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
+        <div className="flex-1 overflow-y-auto p-4 pt-16 md:p-6 lg:p-8"> {/* Adjusted padding for fixed header and responsiveness */}
           <div className="max-w-3xl mx-auto space-y-4 lg:max-w-4xl"> {/* Increased max-width for larger screens */}
             {messages.map((msg, idx) => (
               <AnimatePresence key={idx}>
@@ -347,7 +347,7 @@ const ChatApp = () => {
       {/* User List */}
       <div 
         className={`${showUserList ? 'translate-x-0' : 'translate-x-full'} 
-                  md:translate-x-0 fixed md:relative inset-y-0 right-0 z-20 w-64 bg-white dark:bg-gray-800 
+                  md:translate-x-0 fixed md:static inset-y-0 right-0 z-20 w-64 bg-white dark:bg-gray-800 
                   shadow-lg md:shadow-none transition-transform duration-300 ease-in-out`}
       >
         <div className="p-4">
