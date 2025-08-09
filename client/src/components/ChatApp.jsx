@@ -158,7 +158,7 @@ const ChatApp = () => {
       {/* Sidebar */}
       <div 
         className={`${showSidebar ? 'translate-x-0' : '-translate-x-full'} 
-                  md:translate-x-0 fixed md:static z-10 w-64 h-full bg-white dark:bg-gray-800 
+                  md:translate-x-0 fixed md:static inset-y-0 left-0 z-20 w-64 bg-white dark:bg-gray-800 
                   shadow-lg md:shadow-none transition-transform duration-300 ease-in-out`}
       >
         <div className="p-4 h-full flex flex-col">
@@ -228,7 +228,7 @@ const ChatApp = () => {
       </div>
 
       {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col h-screen overflow-hidden bg-gray-50 dark:bg-gray-900">
+      <div className="flex-1 flex flex-col h-screen overflow-hidden bg-gray-50 dark:bg-gray-900 md:flex">
         {/* Header */}
         <header className="bg-white dark:bg-gray-800 shadow-sm z-10">
           <div className="flex items-center justify-between h-16 px-4">
@@ -258,8 +258,8 @@ const ChatApp = () => {
         </header>
 
         {/* Messages */}
-        <div className="flex-1 overflow-y-auto p-4">
-          <div className="max-w-3xl mx-auto space-y-4">
+        <div className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
+          <div className="max-w-3xl mx-auto space-y-4 lg:max-w-4xl"> {/* Increased max-width for larger screens */}
             {messages.map((msg, idx) => (
               <AnimatePresence key={idx}>
                 <motion.div
@@ -294,8 +294,8 @@ const ChatApp = () => {
         </div>
 
         {/* Message Input */}
-        <div className="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 p-4">
-          <form onSubmit={sendMessage} className="max-w-3xl mx-auto flex space-x-2">
+        <div className="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 p-4 md:p-6">
+          <form onSubmit={sendMessage} className="max-w-3xl mx-auto flex space-x-2 lg:max-w-4xl"> {/* Increased max-width for larger screens */}
             <div className="flex-1 relative">
               <input
                 type="text"
@@ -347,8 +347,8 @@ const ChatApp = () => {
       {/* User List */}
       <div 
         className={`${showUserList ? 'translate-x-0' : 'translate-x-full'} 
-                  md:translate-x-0 fixed right-0 top-0 h-full w-64 bg-white dark:bg-gray-800 
-                  shadow-lg md:shadow-none transition-transform duration-300 ease-in-out z-10`}
+                  md:translate-x-0 fixed inset-y-0 right-0 z-20 w-64 bg-white dark:bg-gray-800 
+                  shadow-lg md:shadow-none transition-transform duration-300 ease-in-out`}
       >
         <div className="p-4">
           <div className="flex items-center justify-between mb-4">
@@ -392,7 +392,7 @@ const ChatApp = () => {
       {/* Overlay for mobile */}
       {(showSidebar || showUserList) && (
         <div 
-          className="fixed inset-0 bg-black bg-opacity-50 z-0 md:hidden"
+          className="fixed inset-0 bg-black bg-opacity-50 z-10 md:hidden"
           onClick={() => {
             setShowSidebar(false);
             setShowUserList(false);
