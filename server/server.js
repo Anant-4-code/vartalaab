@@ -6,9 +6,15 @@ import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import axios from 'axios';
+import { promises as fs } from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 // Load environment variables
 dotenv.config();
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const server = http.createServer(app);
@@ -42,6 +48,36 @@ app.use(morgan('dev'));
 const users = new Map();
 const rooms = new Set(['general', 'random', 'help']);
 
+// In-memory store for messages (will be synced with file system)
+const messagesFilePath = path.resolve(__dirname, 'messages.json');
+let messages = [];
+
+// Function to load messages from file
+const loadMessages = async () => {
+  try {
+    const data = await fs.readFile(messagesFilePath, 'utf8');
+    messages = JSON.parse(data);
+    console.log(`Loaded ${messages.length} messages from ${messagesFilePath}`);
+  } catch (error) {
+    if (error.code === 'ENOENT') {
+      console.log('messages.json not found, starting with empty messages.');
+      messages = [];
+    } else {
+      console.error('Failed to load messages:', error);
+    }
+  }
+};
+
+// Function to save messages to file
+const saveMessages = async () => {
+  try {
+    await fs.writeFile(messagesFilePath, JSON.stringify(messages, null, 2), 'utf8');
+    console.log('Messages saved to messages.json');
+  } catch (error) {
+    console.error('Failed to save messages:', error);
+  }
+};
+
 // Socket.IO connection handling
 io.on('connection', (socket) => {
   console.log('New client connected:', socket.id);
@@ -60,6 +96,10 @@ io.on('connection', (socket) => {
     
     // Update users map
     users.set(socket.id, { username, room });
+
+    // Send past messages to the newly joined user
+    const roomMessages = messages.filter(msg => msg.room === room);
+    socket.emit('chatHistory', roomMessages);
     
     // Notify room about new user
     socket.to(room).emit('message', {
@@ -76,15 +116,17 @@ io.on('connection', (socket) => {
   });
 
   // Handle new message
-  socket.on('sendMessage', (message) => {
+  socket.on('sendMessage', async (message) => {
     const user = users.get(socket.id);
     if (user) {
       const msg = {
         user: user.username,
         text: message.text,
-        timestamp: new Date(),
+        timestamp: new Date().toISOString(), // Ensure ISO string for consistent parsing
         room: user.room
       };
+      messages.push(msg); // Add message to in-memory store
+      await saveMessages(); // Persist messages to file
       io.to(user.room).emit('message', msg);
     }
   });
@@ -166,10 +208,11 @@ app.use((err, req, res, next) => {
 });
 
 // Start the server
-const PORT = process.env.PORT || 3001;
-const serverInstance = server.listen(PORT, () => {
+const PORT = process.env.PORT || 3002; // Changed from 3001 to 3002
+const serverInstance = server.listen(PORT, async () => {
   console.log(`Server running on port ${PORT}`);
   console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+  await loadMessages(); // Load messages when server starts
 });
 
 // Handle unhandled promise rejections

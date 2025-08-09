@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { FiSend, FiMoon, FiSun, FiMessageSquare, FiUsers, FiPlus, FiLogOut } from 'react-icons/fi';
 
 // Determine the server URL based on environment
-const SERVER_URL = import.meta.env.VITE_APP_SERVER_URL || 'http://localhost:3001';
+const SERVER_URL = import.meta.env.VITE_APP_SERVER_URL || 'http://localhost:3002'; // Changed from 3001 to 3002
 
 // Initialize socket connection
 const socket = io(SERVER_URL, { autoConnect: false });
@@ -24,6 +24,12 @@ const ChatApp = () => {
   const [showUserList, setShowUserList] = useState(false);
   const messagesEndRef = useRef(null);
   const navigate = useNavigate();
+  const currentRoomRef = useRef(currentRoom); // Ref to hold the latest currentRoom
+
+  // Update the ref whenever currentRoom changes
+  useEffect(() => {
+    currentRoomRef.current = currentRoom;
+  }, [currentRoom]);
 
   // Toggle dark mode
   const toggleDarkMode = () => {
@@ -42,45 +48,71 @@ const ChatApp = () => {
     }
   }, []);
 
-  // Connect to socket when component mounts
+  // Initialize socket connection and listeners once
+  useEffect(() => {
+    socket.connect();
+
+    socket.on('connect', () => {
+      console.log('Socket connected!');
+      // Emit join event immediately after connection if username is available
+      const savedUsername = localStorage.getItem('username');
+      if (savedUsername) {
+        socket.emit('join', { username: savedUsername, room: currentRoomRef.current });
+      }
+    });
+
+    socket.on('message', (message) => {
+      // Ensure message has required fields and valid timestamp
+      const validatedMessage = {
+        ...message,
+        username: message.user || 'Unknown', // Changed from message.username to message.user
+        text: message.text || '',
+        time: message.time || new Date().toISOString()
+      };
+      setMessages((prevMessages) => [...prevMessages, validatedMessage]);
+    });
+
+    socket.on('chatHistory', (history) => {
+      setMessages(history.map(msg => ({
+        username: msg.user || 'Unknown',
+        text: msg.text || '',
+        time: msg.timestamp || new Date().toISOString()
+      })));
+    });
+
+    socket.on('roomData', ({ users }) => {
+      setUsers(users || []);
+    });
+
+    socket.on('disconnect', () => {
+      console.log('Socket disconnected!');
+    });
+
+    return () => {
+      socket.off('connect');
+      socket.off('message');
+      socket.off('chatHistory');
+      socket.off('roomData');
+      socket.off('disconnect');
+      // No need to disconnect here as it's handled on component unmount and by browser navigation
+    };
+  }, []); // Empty dependency array means this runs once on mount
+
+  // Handle username initialization and room joining when currentRoom changes
   useEffect(() => {
     let savedUsername = localStorage.getItem('username');
-    // If no username is found, use a default one for testing
     if (!savedUsername) {
       savedUsername = `Guest_${Math.floor(Math.random() * 1000)}`;
       localStorage.setItem('username', savedUsername);
     }
     setUsername(savedUsername);
     
-    // Connect to socket
-    socket.connect();
-    
-    // Join default room
-    socket.emit('join', { username: savedUsername, room: currentRoom });
-    
-    // Set up event listeners
-    socket.on('message', (message) => {
-      // Ensure message has required fields and valid timestamp
-      const validatedMessage = {
-        ...message,
-        username: message.username || 'Unknown',
-        text: message.text || '',
-        time: message.time || new Date().toISOString()
-      };
-      setMessages((prevMessages) => [...prevMessages, validatedMessage]);
-    });
-    
-    socket.on('roomData', ({ room, users }) => {
-      setUsers(users || []);
-    });
-    
-    // Clean up on unmount
-    return () => {
-      socket.off('message');
-      socket.off('roomUsers');
-      socket.disconnect();
-    };
-  }, [currentRoom, navigate]);
+    // Emit join event whenever currentRoom changes, but only if socket is already connected
+    // This ensures the user joins the correct room when switching rooms
+    if (socket.connected) {
+      socket.emit('join', { username: savedUsername, room: currentRoom });
+    }
+  }, [currentRoom]); // Only depend on currentRoom now
 
   // Auto-scroll to bottom of messages
   useEffect(() => {
@@ -111,7 +143,6 @@ const ChatApp = () => {
     
     // Join new room
     setCurrentRoom(room);
-    setMessages([]);
     socket.emit('join', { username, room });
   };
 
