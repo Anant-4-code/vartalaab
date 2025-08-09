@@ -20,9 +20,7 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: process.env.NODE_ENV === 'development' 
-      ? ['http://localhost:3000', 'http://localhost:5173'] 
-      : ['https://vartalaab-git-main-anant-4-code-projects.vercel.app'], // Removed 'YOUR_PRODUCTION_URL'
+    origin: '*', // Temporarily set to allow all origins for debugging
     methods: ['GET', 'POST'],
     credentials: true
   }
@@ -30,9 +28,7 @@ const io = new Server(server, {
 
 // CORS configuration for Express
 const corsOptions = {
-  origin: process.env.NODE_ENV === 'development' 
-    ? ['http://localhost:3000', 'http://localhost:5173']
-    : ['https://vartalaab-git-main-anant-4-code-projects.vercel.app'], // Removed 'YOUR_PRODUCTION_URL'
+  origin: '*', // Temporarily set to allow all origins for debugging
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
