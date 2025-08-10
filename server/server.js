@@ -43,6 +43,7 @@ app.use(morgan('dev'));
 // Store active users and rooms
 const users = new Map();
 const rooms = new Set(['general', 'random', 'help']);
+const typingUsers = new Map(); // Store typing status: Map<room, Set<username>>
 
 // In-memory store for messages (will be synced with file system)
 const messagesFilePath = path.resolve(__dirname, 'messages.json');
@@ -54,6 +55,7 @@ const loadMessages = async () => {
     const data = await fs.readFile(messagesFilePath, 'utf8');
     messages = JSON.parse(data);
     console.log(`Loaded ${messages.length} messages from ${messagesFilePath}`);
+    console.log('Messages loaded:', messages); // Added log
   } catch (error) {
     if (error.code === 'ENOENT') {
       console.log('messages.json not found, starting with empty messages.');
@@ -95,7 +97,9 @@ io.on('connection', (socket) => {
 
     // Send past messages to the newly joined user
     const roomMessages = messages.filter(msg => msg.room === room);
+    console.log(`Filtering messages for room ${room}. Total messages: ${messages.length}, Room messages: ${roomMessages.length}`); // Added log
     socket.emit('chatHistory', roomMessages);
+    console.log(`Server emitting chatHistory to ${username} in room ${room}:`, roomMessages);
     
     // Notify room about new user
     socket.to(room).emit('message', {
@@ -109,12 +113,63 @@ io.on('connection', (socket) => {
       room,
       users: Array.from(users.values()).filter(user => user.room === room)
     });
+    console.log(`Server emitting roomData to room ${room}:`, Array.from(users.values()).filter(user => user.room === room));
+
+    // Send typing status to new user
+    const currentTypingUsers = typingUsers.get(room) || new Set();
+    socket.emit('typingStatus', Array.from(currentTypingUsers));
+  });
+
+  // Handle typing indicator
+  socket.on('typing', () => {
+    const user = users.get(socket.id);
+    if (user) {
+      const { username, room } = user;
+      console.log(`${username} in room ${room} is typing.`); // Debug log
+      if (!typingUsers.has(room)) {
+        typingUsers.set(room, new Set());
+      }
+      typingUsers.get(room).add(username);
+      io.to(room).emit('typingStatus', Array.from(typingUsers.get(room)));
+      console.log('Broadcasting typingStatus:', Array.from(typingUsers.get(room))); // Debug log
+    }
+  });
+
+  // Handle stop typing indicator
+  socket.on('stopTyping', () => {
+    const user = users.get(socket.id);
+    if (user) {
+      const { username, room } = user;
+      console.log(`${username} in room ${room} stopped typing.`); // Debug log
+      if (typingUsers.has(room)) {
+        typingUsers.get(room).delete(username);
+        // If no one is typing in the room, delete the room entry
+        if (typingUsers.get(room).size === 0) {
+          typingUsers.delete(room);
+        }
+        io.to(room).emit('typingStatus', Array.from(typingUsers.get(room)));
+        console.log('Broadcasting typingStatus:', Array.from(typingUsers.get(room))); // Debug log
+      }
+    }
   });
 
   // Handle new message
   socket.on('sendMessage', async (message) => {
     const user = users.get(socket.id);
     if (user) {
+      // Also emit stopTyping when a message is sent
+      const { username, room } = user;
+      if (typingUsers.has(room)) {
+        const roomTypingUsers = typingUsers.get(room);
+        if (roomTypingUsers) { // Added null check here
+          roomTypingUsers.delete(username);
+          if (roomTypingUsers.size === 0) {
+            typingUsers.delete(room);
+          }
+          io.to(room).emit('typingStatus', Array.from(roomTypingUsers));
+          console.log('Broadcasting typingStatus after message:', Array.from(roomTypingUsers)); // Debug log
+        }
+      }
       const msg = {
         user: user.username,
         text: message.text,
@@ -204,7 +259,7 @@ app.use((err, req, res, next) => {
 });
 
 // Start the server
-const PORT = process.env.PORT || 3002; // Changed from 3001 to 3002
+const PORT = process.env.PORT || 3001; // Changed from 3002 to 3001
 const serverInstance = server.listen(PORT, async () => {
   console.log(`Server running on port ${PORT}`);
   console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);

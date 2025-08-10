@@ -69,10 +69,8 @@ function App() {
   // Skip loading state for now
 
   return (
-    <div className={darkMode ? 'dark' : ''}>
-      <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
-        <Router>
-          <Routes>
+    <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+      <Routes>
             <Route 
               path="/" 
               element={
@@ -96,9 +94,7 @@ function App() {
             />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
-        </Router>
-      </div>
-    </div>
+    </Router>
   );
 }
 

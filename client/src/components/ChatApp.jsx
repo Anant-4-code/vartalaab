@@ -7,10 +7,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { FiSend, FiMoon, FiSun, FiMessageSquare, FiUsers, FiPlus, FiLogOut } from 'react-icons/fi';
 
 // Determine the server URL based on environment
-const SERVER_URL = import.meta.env.VITE_APP_SERVER_URL || 'http://localhost:3002'; // Changed from 3001 to 3002
+const SERVER_URL = import.meta.env.VITE_APP_SERVER_URL || 'http://localhost:3001'; // Changed from 3002 to 3001
 
 // Initialize socket connection
-const socket = io(SERVER_URL, { autoConnect: false });
+const socket = io(SERVER_URL, { autoConnect: false, transports: ['websocket', 'polling'] });
 
 const ChatApp = () => {
   const [darkMode, setDarkMode] = useState(false);
@@ -22,14 +22,10 @@ const ChatApp = () => {
   const [currentRoom, setCurrentRoom] = useState('general');
   const [showSidebar, setShowSidebar] = useState(true);
   const [showUserList, setShowUserList] = useState(false);
+  const [typingUsers, setTypingUsers] = useState([]); // New state for typing users
   const messagesEndRef = useRef(null);
   const navigate = useNavigate();
-  const currentRoomRef = useRef(currentRoom); // Ref to hold the latest currentRoom
-
-  // Update the ref whenever currentRoom changes
-  useEffect(() => {
-    currentRoomRef.current = currentRoom;
-  }, [currentRoom]);
+  // Refactor: Remove currentRoomRef and its useEffect as dependencies will be handled by main useEffect
 
   // Toggle dark mode
   const toggleDarkMode = () => {
@@ -48,44 +44,60 @@ const ChatApp = () => {
     }
   }, []);
 
-  // Initialize socket connection and listeners once
+  // Initialize socket connection and listeners
   useEffect(() => {
+    // Initialize username and connect socket
+    let savedUsername = localStorage.getItem('username');
+    if (!savedUsername) {
+      savedUsername = `Guest_${Math.floor(Math.random() * 1000)}`;
+      localStorage.setItem('username', savedUsername);
+    }
+    setUsername(savedUsername);
+
     socket.connect();
 
     socket.on('connect', () => {
       console.log('Socket connected!');
-      // Emit join event immediately after connection if username is available
-      const savedUsername = localStorage.getItem('username');
-      if (savedUsername) {
-        socket.emit('join', { username: savedUsername, room: currentRoomRef.current });
-      }
+      socket.emit('join', { username: savedUsername, room: currentRoom });
     });
 
     socket.on('message', (message) => {
-      // Ensure message has required fields and valid timestamp
+      console.log('Received message:', message); // Added log
       const validatedMessage = {
         ...message,
-        username: message.user || 'Unknown', // Changed from message.username to message.user
+        username: message.user || 'Unknown',
         text: message.text || '',
         time: message.time || new Date().toISOString()
       };
-      setMessages((prevMessages) => [...prevMessages, validatedMessage]);
+      setMessages((prevMessages) => {
+        console.log('Updating messages state:', [...prevMessages, validatedMessage]); // Added log
+        return [...prevMessages, validatedMessage];
+      });
     });
 
     socket.on('chatHistory', (history) => {
+      console.log('Received chatHistory:', history); // Added log
       setMessages(history.map(msg => ({
         username: msg.user || 'Unknown',
         text: msg.text || '',
         time: msg.timestamp || new Date().toISOString()
       })));
+      console.log('Updated messages state from chatHistory:', messages); // Added log
     });
 
     socket.on('roomData', ({ users }) => {
+      console.log('Received roomData:', users); // Added log
       setUsers(users || []);
+      console.log('Updated users state from roomData:', users); // Added log
     });
 
     socket.on('disconnect', () => {
       console.log('Socket disconnected!');
+    });
+
+    socket.on('typingStatus', (usersTyping) => {
+      setTypingUsers(usersTyping);
+      console.log('Received typingStatus:', usersTyping); // Debug log
     });
 
     return () => {
@@ -94,25 +106,9 @@ const ChatApp = () => {
       socket.off('chatHistory');
       socket.off('roomData');
       socket.off('disconnect');
-      // No need to disconnect here as it's handled on component unmount and by browser navigation
+      socket.off('typingStatus');
     };
-  }, []); // Empty dependency array means this runs once on mount
-
-  // Handle username initialization and room joining when currentRoom changes
-  useEffect(() => {
-    let savedUsername = localStorage.getItem('username');
-    if (!savedUsername) {
-      savedUsername = `Guest_${Math.floor(Math.random() * 1000)}`;
-      localStorage.setItem('username', savedUsername);
-    }
-    setUsername(savedUsername);
-    
-    // Emit join event whenever currentRoom changes, but only if socket is already connected
-    // This ensures the user joins the correct room when switching rooms
-    if (socket.connected) {
-      socket.emit('join', { username: savedUsername, room: currentRoom });
-    }
-  }, [currentRoom]); // Only depend on currentRoom now
+  }, [username, currentRoom, messages]); // Dependencies: username and currentRoom to re-emit join when they change
 
   // Auto-scroll to bottom of messages
   useEffect(() => {
@@ -126,12 +122,33 @@ const ChatApp = () => {
     if (message.trim() === '') return;
     
     // Emit message to server
+    console.log('Client emitting sendMessage:', { text: message }); // Added log
     socket.emit('sendMessage', {
       text: message
     });
     
+    // Immediately emit stopTyping after sending a message
+    console.log('Client emitting stopTyping after sendMessage'); // Added log
+    socket.emit('stopTyping');
+    
     // Clear input
     setMessage('');
+  };
+
+  // Handle input change for typing indicator
+  const handleMessageChange = (e) => {
+    const newMessage = e.target.value;
+    setMessage(newMessage);
+    
+    if (newMessage.trim() !== '') {
+      console.log('Client emitting typing event'); // Added log
+      socket.emit('typing');
+      console.log('Emitting typing event'); // Debug log
+    } else {
+      console.log('Client emitting stopTyping event'); // Added log
+      socket.emit('stopTyping');
+      console.log('Emitting stopTyping event'); // Debug log
+    }
   };
 
   // Change room
@@ -140,6 +157,9 @@ const ChatApp = () => {
     
     // Leave current room
     socket.emit('leaveRoom', { username, room: currentRoom });
+    
+    // Emit stopTyping when changing rooms
+    socket.emit('stopTyping');
     
     // Join new room
     setCurrentRoom(room);
@@ -300,7 +320,7 @@ const ChatApp = () => {
               <input
                 type="text"
                 value={message}
-                onChange={(e) => setMessage(e.target.value)}
+                onChange={handleMessageChange}
                 placeholder="Type a message..."
                 className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-full focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
               />
@@ -316,6 +336,8 @@ const ChatApp = () => {
                     "I'll get back to you on that.",
                   ];
                   setMessage(smartReplies[Math.floor(Math.random() * smartReplies.length)]);
+                  // Also emit stopTyping when a smart reply is selected
+                  socket.emit('stopTyping');
                 }}
                 className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-primary-500"
                 title="Smart Reply"
@@ -341,6 +363,13 @@ const ChatApp = () => {
               <FiSend className="w-5 h-5" />
             </button>
           </form>
+          {typingUsers.filter(user => user !== username).length > 0 && (
+            <div className="text-sm text-gray-500 dark:text-gray-400 mt-2 text-center">
+              {typingUsers.filter(user => user !== username).length === 1
+                ? `${typingUsers.filter(user => user !== username)[0]} is typing...`
+                : `${typingUsers.filter(user => user !== username).join(', ')} are typing...`}
+            </div>
+          )}
         </div>
       </div>
 
